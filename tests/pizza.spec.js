@@ -146,5 +146,6 @@ test('order pizzas', async ({page}) => {
   await page.getByRole('button', {name: 'Pay now'}).click()
 
   // Assert - Payment
-  await expect(page.getByText('0.004')).toBeVisible();
+  await expect(page.getByText('Here is your JWT Pizza')).toBeVisible();
+  await expect(page.getByText('abc.def.ghi')).toBeVisible();
 })
