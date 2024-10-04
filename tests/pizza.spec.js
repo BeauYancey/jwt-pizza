@@ -151,3 +151,31 @@ test('order pizzas', async ({page}) => {
   await expect(page.getByText('Here is your JWT Pizza')).toBeVisible();
   await expect(page.getByText('abc.def.ghi')).toBeVisible();
 })
+
+test.describe('footer navigation', () => {
+  test('franchise', async ({page}) => {
+    await page.goto('/')
+    const footer = page.getByRole('contentinfo')
+    await footer.getByRole('link', {name: 'franchise'}).click()
+
+    await expect(page.getByRole('heading', {name: 'So you want'})).toBeVisible()
+    await expect(page.getByRole('heading', {name: 'Unleash'})).toBeVisible()
+  })
+
+  test('about', async ({page}) => {
+    await page.goto('/')
+    const footer = page.getByRole('contentinfo')
+    await footer.getByRole('link', {name: 'about'}).click()
+
+    await expect(page.getByRole('heading', {name: 'secret sauce'})).toBeVisible()
+    await expect(page.getByRole('heading', {name: 'employees'})).toBeVisible()
+  })
+
+  test('history', async ({page}) => {
+    await page.goto('/')
+    const footer = page.getByRole('contentinfo')
+    await footer.getByRole('link', {name: 'history'}).click()
+
+    await expect(page.getByRole('heading', {name: 'Mama Rucci'})).toBeVisible()
+  })
+})
