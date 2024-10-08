@@ -1,5 +1,5 @@
 import { test, expect } from 'playwright-test-coverage';
-import { login } from './test-utils';
+import { login, loginFranchisee } from './test-utils';
 
 test('has title', async ({ page }) => {
   // Arrange + Act
@@ -44,6 +44,11 @@ test.describe('user', () => {
       expect(route.request().postDataJSON()).toMatchObject(loginReq)
       await route.fulfill({json: loginRes})
     })
+    await page.route('*/**/api/order', async (route) => {
+      const orderRes = {orders: [{id: 1, items: [{price: .001}, {price: .002}], date: '2024-10-08'}]}
+      expect(route.request().method()).toBe('GET')
+      await route.fulfill({json: orderRes})
+    })
 
     // Act
     await page.goto('/');
@@ -57,6 +62,8 @@ test.describe('user', () => {
     await page.getByRole('link', { name: 'DU' }).click();
     await expect(page.getByText('Demo User')).toBeVisible();
     await expect(page.getByText('demo@test.com')).toBeVisible();
+    await expect(page.getByRole('table')).toContainText('Date')
+    await expect(page.getByRole('table')).toContainText('0.003')
   })
 
   test('logout', async ({page}) => {
@@ -177,5 +184,71 @@ test.describe('footer navigation', () => {
     await footer.getByRole('link', {name: 'history'}).click()
 
     await expect(page.getByRole('heading', {name: 'Mama Rucci'})).toBeVisible()
+  })
+})
+
+test.describe('franchise', () => {
+  test('login franchisee', async ({page}) => {
+    await loginFranchisee(page);
+    await page.getByLabel('Global').getByRole('link', { name: 'Franchise' }).click();
+
+    await expect(page.getByRole('heading', {name: 'Test Franchise'})).toBeVisible()
+    await expect(page.getByRole('button', {name: 'Create Store'})).toBeVisible()
+
+    await page.getByRole('link', { name: 'DU' }).click();
+    await expect(page.getByText('Franchisee on 1')).toBeVisible()
+  })
+
+  test('create store', async ({page}) => {
+    await loginFranchisee(page);
+    await page.getByLabel('Global').getByRole('link', { name: 'Franchise' }).click();
+    await page.getByRole('button', {name: 'Create Store'}).click()
+    await page.getByPlaceholder('store name').fill('Test Store')
+
+    await page.route('*/**/api/franchise/1/store', async (route) => {
+      if (route.request().method() == 'POST') {
+        const franRes = {id:1,franchiseId:1,name:"Test Store"}
+        await route.fulfill({json: franRes})
+      }
+    })
+    await page.route('*/**/api/franchise/1', async (route) => {
+      if (route.request().method() == 'GET') {
+        const franRes = [{id: 1, name: 'Test Franchise', admins: [{id: 1, email: 'demo@test.com', name: 'Demo User'}], stores: [{id: 1, name: "Test Store", totalRevenue: 0}]}]
+        await route.fulfill({json: franRes})
+      }
+    })
+
+    await page.getByRole('button', {name: 'Create'}).click()
+    
+    await expect(page.getByRole('table')).toContainText('Test Store')
+  })
+
+  test('close store', async ({page}) => {
+    await loginFranchisee(page);
+    await page.route('*/**/api/franchise/1', async (route) => {
+      if (route.request().method() == 'GET') {
+        const franRes = [{id: 1, name: 'Test Franchise', admins: [{id: 1, email: 'demo@test.com', name: 'Demo User'}], stores: [{id: 1, name: "Test Store", totalRevenue: 0}]}]
+        await route.fulfill({json: franRes})
+      }
+    })
+    await page.getByLabel('Global').getByRole('link', { name: 'Franchise' }).click();
+    await expect(page.getByRole('table')).toBeVisible()
+    await page.getByRole('button', {name: 'Close'}).click()
+    await expect(page.getByRole('heading', {name: 'Sorry'})).toBeVisible()
+    await page.route('*/**/api/franchise/1/store/1', async (route) => {
+      if (route.request().method() == 'DELETE') {
+        const deleteRes = {message:"store deleted"}
+        await route.fulfill({json: deleteRes})
+      }
+    })
+    await page.route('*/**/api/franchise/1', async (route) => {
+      if (route.request().method() == 'GET') {
+        const franRes = [{id: 1, name: 'Test Franchise', admins: [{id: 1, email: 'demo@test.com', name: 'Demo User'}], stores: []}]
+        await route.fulfill({json: franRes})
+      }
+    })
+    await page.getByRole('button', {name: 'Close'}).click()
+    await expect(page.getByRole('table')).toBeVisible()
+    await expect(page.getByRole('table')).not.toContainText('Test Franchise')
   })
 })
