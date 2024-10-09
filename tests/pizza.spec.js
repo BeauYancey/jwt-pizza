@@ -1,12 +1,15 @@
 import { test, expect } from 'playwright-test-coverage';
 import { login, loginAdmin, loginFranchisee } from './test-utils';
 
-test('has title', async ({ page }) => {
+test('initial load', async ({ page }) => {
   // Arrange + Act
   await page.goto('/');
 
   // Assert
   await expect(page).toHaveTitle('JWT Pizza');
+  await expect(page.getByRole('button', {name: 'order'})).toBeVisible()
+  await expect(page.getByText('Pizza is an absolute delight')).toBeVisible();
+  await expect(page.getByRole('main').getByRole('img')).toBeVisible()
 });
 
 test.describe('user', () => {
