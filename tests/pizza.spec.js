@@ -1,5 +1,5 @@
 import { test, expect } from 'playwright-test-coverage';
-import { login, loginFranchisee } from './test-utils';
+import { login, loginAdmin, loginFranchisee } from './test-utils';
 
 test('has title', async ({ page }) => {
   // Arrange + Act
@@ -250,5 +250,84 @@ test.describe('franchise', () => {
     await page.getByRole('button', {name: 'Close'}).click()
     await expect(page.getByRole('table')).toBeVisible()
     await expect(page.getByRole('table')).not.toContainText('Test Franchise')
+  })
+})
+
+test.describe('admin', async () => {
+  test('admin dashboard', async ({page}) => {
+    await loginAdmin(page)
+    await page.route('*/**/api/franchise', async (route) => {
+      if (route.request().method() == 'GET') {
+        const franRes = [{id: 1, name: 'Test Franchise', admins: [{id: 1, email: 'demo@test.com', name: 'Demo User'}], stores: [{id: 1, name: "Test Store", totalRevenue: 0}]}]
+        await route.fulfill({json: franRes})
+      }
+    })
+    await page.getByLabel('Global').getByRole('link', { name: 'Admin' }).click();
+
+    await expect(page.getByRole('heading', {name: "Mama Ricci's kitchen"})).toBeVisible()
+    await expect(page.getByRole('button', {name: 'Add Franchise'})).toBeVisible()
+    await expect(page.getByRole('table')).toContainText('Test Franchise')
+    await expect(page.getByRole('table')).toContainText('Test Store')
+  })
+
+  test('close franchise', async ({page}) => {
+    await loginAdmin(page)
+    await page.route('*/**/api/franchise', async (route) => {
+      if (route.request().method() == 'GET') {
+        const franRes = [{id: 1, name: 'Test Franchise', admins: [{id: 1, email: 'demo@test.com', name: 'Demo User'}], stores: []}]
+        await route.fulfill({json: franRes})
+      }
+    })
+    await page.getByLabel('Global').getByRole('link', { name: 'Admin' }).click();
+    await page.getByRole('button', {name: 'Close'}).click()
+    await expect(page.getByRole('heading')).toContainText('Sorry to see you go')
+    await expect(page.getByRole('button', {name: 'Close'})).toBeVisible()
+    await expect(page.getByRole('button', {name: 'Cancel'})).toBeVisible()
+
+    await page.route('*/**/api/franchise/1', async (route) => {
+      if (route.request().method() === 'DELETE') {
+        const deleteRes = {message: 'franchise deleted'}
+        await route.fulfill({json: deleteRes})
+      }
+    })
+    await page.route('*/**/api/franchise', async (route) => {
+      if (route.request().method() == 'GET') {
+        const franRes = []
+        await route.fulfill({json: franRes})
+      }
+    })
+
+    await page.getByRole('button', {name: 'Close'}).click()
+
+    await expect(page.getByRole('table')).not.toContainText('Test Franchise')
+    await expect(page.getByRole('button', {name: 'Add Franchise'})).toBeVisible()
+  })
+
+  test('create franchise', async ({page}) => {
+    await loginAdmin(page)
+    await page.route('*/**/api/franchise', async (route) => {
+      if (route.request().method() == 'GET') {
+        await route.fulfill({json: []})
+      }
+    })
+    await page.getByLabel('Global').getByRole('link', { name: 'Admin' }).click(); 
+    await page.getByRole('button', {name: 'Add Franchise'}).click()
+    await page.getByPlaceholder('franchise name').fill('Test Franchise')
+    await page.getByPlaceholder('franchisee admin email').fill('demo@test.com')
+
+    await page.route('*/**/api/franchise', async (route) => {
+      const newFranchise = {name: 'Test Franchise', admins: [{id: 1, name: 'Demo User', email: 'demo@test.com'}], stores: []}
+      if (route.request().method() === 'POST') {
+        const postReq = {name: 'Test Franchise', admins: [{email: 'demo@test.com'}], stores: []}
+        expect(route.request().postDataJSON()).toMatchObject(postReq)
+        await route.fulfill({json: newFranchise})
+      }
+      if (route.request().method() === 'GET') {
+        await route.fulfill({json: [newFranchise]})
+      }
+    })
+    await page.getByRole('button', {name: 'Create'}).click()
+
+    await expect(page.getByRole('table')).toContainText('Test Franchise')
   })
 })
