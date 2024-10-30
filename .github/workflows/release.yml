@@ -1,0 +1,22 @@
+name: Production release
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release'
+        required: true
+      description:
+        required: true
+
+permissions:
+  id-token: write
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      version: ${{ github.event.inputs.version }}
+    environment:
+      name: production
+      url: https://pizza.YOUDOMAINNAME
