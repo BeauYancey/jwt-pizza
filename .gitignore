@@ -10,3 +10,4 @@ node_modules/
 /blob-report/
 /playwright/.cache/
 .nyc_output
+/loadTests/user.js
